@@ -1,0 +1,64 @@
+@PutMapping({"{id}/riskAssessment"})
+    public RiskAssessment updateRiskAssessment(@PathVariable Long id, @Valid @RequestBody RiskAssessment riskAssessment) throws ResourceNotFoundException {
+        OrganizationalUnit organizationalUnit = this.organizationalUnitService.getOrganizationUnitById(id);
+        if (null == organizationalUnit) {
+            throw new ResourceNotFoundException("RiskCategory not found on :: " + id);
+        } else {
+            organizationalUnit.setRiskAssessment(riskAssessment);
+            return this.organizationalUnitService.saveOrganizationUnit(organizationalUnit).getRiskAssessment();
+        }
+    }
+
+    @PutMapping({"{id}/riskCategory/{riskCategoryId}/riskCriteria/{riskCriteriaId}/riskAssessment"})
+    public RiskAssessment updateRiskAssessment(@PathVariable Long id, @PathVariable Long riskCategoryId, @PathVariable Long riskCriteriaId, @Valid @RequestBody RiskCriteriaAssessment riskCriteriaAssessmentRequest) throws ResourceNotFoundException {
+        OrganizationalUnit organizationalUnit = this.organizationalUnitService.getOrganizationUnitById(id);
+        if (null == organizationalUnit) {
+            throw new ResourceNotFoundException("RiskCategory not found on :: " + id);
+        } else {
+            RiskCategory riskCategory = this.riskCategoryService.getRiskCategoryById(riskCategoryId);
+            if (null == riskCategory) {
+                throw new ResourceNotFoundException("RiskCategory not found on :: " + riskCategoryId);
+            } else {
+                RiskCategoryCriteria riskCategoryCriteria = (RiskCategoryCriteria)riskCategory.getRiskCategoryCriterias().stream().filter((iterator) -> {
+                    return riskCriteriaId.equals(iterator.getRiskCriteria().getId());
+                }).findAny().orElse((Object)null);
+                if (null == riskCategoryCriteria) {
+                    throw new ResourceNotFoundException("RiskCategoryCriteria not found on :: " + riskCriteriaId);
+                } else {
+                    RiskAssessment riskAssessment = (RiskAssessment)Optional.ofNullable(organizationalUnit.getRiskAssessment()).orElseGet(() -> {
+                        return new RiskAssessment();
+                    });
+                    RiskCategoryAssessment riskCategoryAssessment = (RiskCategoryAssessment)riskAssessment.getRiskCategoryAssessments().stream().filter((iterator) -> {
+                        return riskCategory.equals(iterator.getRiskCategory());
+                    }).findAny().orElse(new RiskCategoryAssessment());
+                    RiskCriteriaAssessment riskCriteriaAssessment = (RiskCriteriaAssessment)riskCategoryAssessment.getRiskCriteriaAssessments().stream().filter((iterator) -> {
+                        return riskCategoryCriteria.equals(iterator.getRiskCategoryCriteria());
+                    }).findAny().orElse(new RiskCriteriaAssessment());
+                    riskCriteriaAssessment.setTotalRating(riskCriteriaAssessmentRequest.getTotalRating());
+                    riskCriteriaAssessment.setRiskCategoryCriteria(riskCategoryCriteria);
+                    riskCategoryAssessment.setRiskCategory(riskCategory);
+                    riskCategoryAssessment.addRiskCriteriaAssessment(riskCriteriaAssessment);
+                    riskAssessment.addRiskCategoryAssessment(riskCategoryAssessment);
+                    riskAssessment.setOrganizationalUnit(organizationalUnit);
+                    organizationalUnit.setRiskAssessment(riskAssessment);
+                    return this.organizationalUnitService.saveOrganizationUnit(organizationalUnit).getRiskAssessment();
+                }
+            }
+        }
+    }
+
+    @GetMapping({"{id}/RC/{riskCategoryId}/riskAssessment"})
+    public Set<RiskCategoryAssessment> updateRiskAssessment(@PathVariable Long id, @PathVariable Long riskCategoryId) throws ResourceNotFoundException {
+        OrganizationalUnit organizationalUnit = this.organizationalUnitService.getOrganizationUnitById(id);
+        if (null == organizationalUnit) {
+            throw new ResourceNotFoundException("RiskCategory not found on :: " + id);
+        } else {
+            RiskCategory riskCategory = this.riskCategoryService.getRiskCategoryById(riskCategoryId);
+            if (null == riskCategory) {
+                throw new ResourceNotFoundException("RiskCategory not found on :: " + riskCategoryId);
+            } else {
+                RiskAssessment riskAssessment = organizationalUnit.getRiskAssessment();
+                return riskAssessment.getRiskCategoryAssessments();
+            }
+        }
+    }
